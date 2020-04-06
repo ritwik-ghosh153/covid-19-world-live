@@ -18,11 +18,12 @@ external_stylesheets = [
        'crossorigin': 'anonymous'
    }
 ]
-# df = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv').iloc[:,1:]
 dfc=pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv').iloc[:,1:]
 dfd=pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv').iloc[:,1:]
 dfr=pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv').iloc[:,1:]
 
+df.rename(columns={'Country/Region':'Country'},inplace=True)
 
 dfc.rename(columns={'Country/Region':'Country'},inplace=True)
 dfd.rename(columns={'Country/Region':'Country'},inplace=True)
@@ -35,26 +36,20 @@ trimr=dfr.groupby('Country').sum().reset_index()
 
 #for the map
 
-# dates = pd.DataFrame(df.columns[3:], columns=['Date'])
-# countries=df.iloc[:,0:3]
-# final=pd.DataFrame()
-# df.rename(columns={'Country/Region':'Country'},inplace=True)
-# for i in dates['Date']:
-#     countries['Date']=i
-#     a=df[['Country',i]]
-#     confirmed=a.groupby('Country')[i].sum().reset_index().set_index('Country')
-#     countries=countries.drop_duplicates(subset=['Country'])
-#     x=countries.set_index('Country')
-#     x['Confirmed']=confirmed
-#     x=x.reset_index()
-#     final=final.append(x,ignore_index=True)
+dates = pd.DataFrame(df.columns[3:], columns=['Date'])
+countries=df.iloc[:,0:3]
+final=pd.DataFrame()
+for i in dates['Date']:
+    countries['Date']=i
+    countries['Confirmed']=df[[i]]
+    final=final.append(countries,ignore_index=True)
 
 # per_country=dfc.iloc[:,3:].sum(axis=0).reset_index()
 # per_country[['Country','Lat','Long']]=dfc[['Country','Lat','Long']]
 # per_date=dfc.iloc[:,3:].sum().reset_index().rename(columns={'index':'Date',0:'Confirmed'})
 
 #animated map
-# fig1 = px.scatter_geo(df, lat='Lat', lon='Long', locations="Country", locationmode='country names',color='Country',
+# fig1 = px.scatter_geo(final, lat='Lat', lon='Long', locations="Country", locationmode='country names',color='Country',
 #                      hover_name='Country',hover_data=['Confirmed'],size='Confirmed', size_max=25,
 #                      animation_frame='Date',
 #                      projection="natural earth")
@@ -117,7 +112,7 @@ fig3=go.Figure(data=[go.Bar(x=list(dfc.columns[4:]),
                    barmode='stack'))
 
 
-options=[{'label':'All','value':'All'}]
+options=[{'label':'World','value':'All'}]
 for i in trimc['Country']:
     options.append({'label':i,'value':i})
 
@@ -142,7 +137,7 @@ for i in range(0,len(trimd)):
     x.append(trimd.iloc[i,-1]-trimd.iloc[i,-2])
 display['New Deaths']=x
 
-display['Total Deaths']=trimr.iloc[:,-1].values
+display['Total Recoveries']=trimr.iloc[:,-1].values
 x=[]
 for i in range(0,len(trimr)):
     x.append(trimr.iloc[i,-1]-trimr.iloc[i,-2])
@@ -153,6 +148,11 @@ display['New Recoveries']=x
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server=app.server
+
+# @server.route("/dash")
+# def MyDashApp():
+#     app.title = "Title"
+#     return app.index()
 
 app.layout = html.Div([
     html.Div(html.H1("Covid-19 Global Pandemic Live",style={'color':'#fff','text-align':'center','margin':15,'text-decoration':'underline'}),),
@@ -196,58 +196,78 @@ app.layout = html.Div([
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%',}),
 
     #graphs
+
     #map
     html.Div([
         # dcc.Graph(id='Map', figure=fig1)
     ]),
+
     #heatmap
     html.Div([
         # html.H4('Heatmap of current positive cases around the globe',style={'color':'#fff','text-align':'right','text-decoration':'underline'}),
-        dcc.Graph(figure=px.density_mapbox(dfc, lat='Lat', lon='Long', z=dfc.columns[-1], radius=25,
+        dcc.Graph(figure=px.density_mapbox(final, lat='Lat', lon='Long', z='Confirmed', radius=25,
                         # center=dict(lat=0, lon=180),
                               height=800,             zoom=1,
                         mapbox_style="stamen-terrain",
                         hover_name='Country',
-                        labels={dfc.columns[-1]:'Current Cases'},
+                        # labels={dfc.columns[-1]:'Current Cases'},
+                        animation_frame='Date',
                         title='Heatmap of current positive cases around the globe'
                         ),
                   )
     ], style={'margin':40}),
-    #Global Trends
-    html.Div([
 
-        html.Div([
-            #dropdown
-            html.Div([
-        dcc.Dropdown(
-            id='picker',
-            options=[
-                {'label': 'All (Logarithmic)', 'value': 'alllog'},
-                {'label': 'All', 'value': 'all'},
-                {'label': 'Confirmed', 'value': 'confirmed'},
-                {'label': 'Deceased', 'value': 'deceased'},
-                {'label': 'Recovered', 'value': 'recovered'},
-            ],
-            value='alllog'
-        ),
-        dcc.Graph(id='Cases')
-    ],),
-        ], className='col', style={'margin':5}),
-        html.Div([
-            #bar
-            html.Div([
-        dcc.Graph(figure=fig3)
-    ],),
-        ], className='col', style={'margin':5}),
+    # #Global Trends
+    # html.Div([
+    #
+    #     html.Div([
+    #         #dropdown
+    #         html.Div([
+    #     dcc.Dropdown(
+    #         id='picker',
+    #         options=[
+    #             {'label': 'All (Logarithmic)', 'value': 'alllog'},
+    #             {'label': 'All', 'value': 'all'},
+    #             {'label': 'Confirmed', 'value': 'confirmed'},
+    #             {'label': 'Deceased', 'value': 'deceased'},
+    #             {'label': 'Recovered', 'value': 'recovered'},
+    #         ],
+    #         value='alllog'
+    #     ),
+    #     dcc.Graph(id='Cases')
+    # ],),
+    #     ], className='col', style={'margin':5}),
+    #     html.Div([
+    #         #bar
+    #         html.Div([
+    #     dcc.Graph(figure=fig3)
+    # ],),
+    #     ], className='col', style={'margin':5}),
+    #
+    # ], className='row', style={'padding':30}),
 
-    ], className='row', style={'padding':30}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
 
     html.H2('Country-wise trends', style={'color':'#fff','text-align':'center','text-decoration':'underline','margin-top':15}),
+
     #dropdown country
     html.Div([
         dcc.Dropdown(id='country-picker', options=options, value='All'),
     ],style={'margin-bottom':0,'margin-top':15,'margin-left':35,'margin-right':35},),
+
+    #checklist for kind
+    html.Div([
+        dcc.Checklist(
+            options=[
+                {'label': 'Positive', 'value': 'con'},
+                {'label': 'Deceased', 'value': 'ded'},
+                {'label': 'Recovered', 'value': 'rec'}
+            ],
+            value=['con', 'ded', 'rec'],
+            id='check-kind', style={'color':'#fff'}
+        )
+    ]),
+
     #graphs country
     html.Div([
         html.Div([
@@ -269,6 +289,46 @@ app.layout = html.Div([
     ],className='row', style={'padding':30}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
 
+    #dropdown kind
+    html.Div([
+        dcc.Dropdown(
+                    id='countryvs',
+                    options=[
+                        {'label': 'All', 'value': 'all'},
+                        {'label': 'Confirmed', 'value': 'confirmed'},
+                        {'label': 'Deceased', 'value': 'deceased'},
+                        {'label': 'Recovered', 'value': 'recovered'},
+                    ],
+                    value='all'
+                ),
+    ]),
+
+    #Slider for range of countries
+    html.Div([
+html.Div([
+    dcc.RangeSlider(
+        id='country-range-slider',
+        min=0,
+        max=180,
+        step=5,
+        value=[0, 20],
+        # allowCross=False,
+        tooltip={'always_visible':True, 'placement':'bottomLeft'},
+        updatemode='drag',
+        pushable=5
+    ),
+    html.Div(id='output-container-range-slider')
+])
+    ]),
+    #Country vs Country Graphs
+    html.Div([
+        html.Div([
+            dcc.Graph(id='countryvs_totals')
+        ],className='col'),
+        html.Div([
+            dcc.Graph(id='countryvs_daily')
+        ],className='col'),
+],className='row'),
     #pie
     html.Div([
         html.H4('Total number of positive cases currently per country={}'.format(total),style={'color':'#fff','text-align':'right','text-decoration':'underline'}),
@@ -333,86 +393,59 @@ app.layout = html.Div([
 
 #For Country Specific trends
 #Cumulative
-@app.callback(Output('country-case-cumulative','figure'), [Input('country-picker','value'),Input('radio','value')])
-def country_specific_cumulative(type, kind):
-    # , Output('country-case-daily', 'figure')]
-    if type in trimc['Country'].values and kind=='log':
-        return {
-           'data': [go.Scatter(x=list(trimc[trimc['Country']==type].iloc[:,3:].columns),
+@app.callback(Output('country-case-cumulative','figure'), [Input('country-picker','value'),Input('radio','value'),Input('check-kind','value')])
+def country_specific_cumulative(type, kind, graph):
+    data=[]
+    #if one of the countries
+    if type in trimc['Country'].values:
+        #confirmed graph trace
+        if 'con' in graph:
+            data.append(go.Scatter(x=list(trimc[trimc['Country']==type].iloc[:,3:].columns),
                                y=trimc[trimc['Country']==type].iloc[:,3:].values.tolist()[0],
                                mode='lines',
                                marker={'color': '#a0065a'},
-                               name='Confirmed'),
-                    go.Scatter(x=list(trimd[trimd['Country']==type].iloc[:,3:].columns),
+                               name='Confirmed'),)
+        #death graph trace
+        if 'ded' in graph:
+            data.append(go.Scatter(x=list(trimd[trimd['Country']==type].iloc[:,3:].columns),
                                y=trimd[trimd['Country']==type].iloc[:,3:].values.tolist()[0],
                                mode='lines',
                                marker={'color': '#6b6c6e'},
-                               name='Deceased'),
-                    go.Scatter(x=list(trimr[trimr['Country']==type].iloc[:,3:].columns),
+                               name='Deceased'),)
+        #recovered trace
+        if 'rec' in graph:
+            data.append(go.Scatter(x=list(trimr[trimr['Country']==type].iloc[:,3:].columns),
                                y=trimr[trimr['Country']==type].iloc[:,3:].values.tolist()[0],
                                mode='lines',
                                marker={'color': '#1b63f2'},
-                               name='Recovered', )
-                    ],
-           'layout': go.Layout({
-               'xaxis': dict(
-                   title='Date'
-               ),
-               'yaxis': dict(
-                   title='Number of people affected',
-                    type='log',
-               autorange=True
+                               name='Recovered', ))
 
-        ),
-               'title': 'Cumulative Cases Confirmed, Deceased and Recovered'
-           })
-        }
-    elif type in trimc['Country'].values and kind == 'lin':
-        return {
-            'data': [go.Scatter(x=list(trimc[trimc['Country'] == type].iloc[:, 3:].columns),
-                                y=trimc[trimc['Country'] == type].iloc[:, 3:].values.tolist()[0],
-                                mode='lines',
-                                marker={'color': '#a0065a'},
-                                name='Confirmed'),
-                     go.Scatter(x=list(trimd[trimd['Country'] == type].iloc[:, 3:].columns),
-                                y=trimd[trimd['Country'] == type].iloc[:, 3:].values.tolist()[0],
-                                mode='lines',
-                                marker={'color': '#6b6c6e'},
-                                name='Deceased'),
-                     go.Scatter(x=list(trimr[trimr['Country'] == type].iloc[:, 3:].columns),
-                                y=trimr[trimr['Country'] == type].iloc[:, 3:].values.tolist()[0],
-                                mode='lines',
-                                marker={'color': '#1b63f2'},
-                                name='Recovered', )
-                     ],
-            'layout': go.Layout({
-                'xaxis': dict(
-                    title='Date'
-                ),
-                'yaxis': dict(
-                    title='Number of people affected',
-                ),
-                'title': 'Cumulative Cases Confirmed, Deceased and Recovered'
-            })
-    }
-    elif type not in trimc['Country'].values and kind == 'log':
-        return {
-            'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
+    #if all in selected
+    if type not in trimc['Country'].values:
+        if 'con' in graph:
+            data.append(go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
                                 y=dfc.sum()[3:].reset_index().iloc[:, 1],
                                 mode='lines',
                                 marker={'color': '#a0065a'},
-                                name='Confirmed'),
-                     go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
+                                name='Confirmed'))
+        #death graph trace
+        if 'ded' in graph:
+            data.append( go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
                                 y=dfd.sum()[3:].reset_index().iloc[:, 1],
                                 mode='lines',
                                 marker={'color': '#6b6c6e'},
-                                name='Deceased'),
-                     go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
+                                name='Deceased'))
+        #recovered trace
+        if 'rec' in graph:
+            data.append(go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
                                 y=dfr.sum()[3:].reset_index().iloc[:, 1],
                                 mode='lines',
                                 marker={'color': '#1b63f2'},
-                                name='Recovered', )
-                     ],
+                                name='Recovered', ))
+
+    if kind=='log':
+        return {
+            'data': data,
             'layout': go.Layout({
                 'xaxis': dict(
                     title='Date'
@@ -425,42 +458,28 @@ def country_specific_cumulative(type, kind):
                 'title': 'Cumulative Cases Confirmed, Deceased and Recovered (Logarithm)'
             })
         }
-    else:
-       return {
-           'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
-                               y=dfc.sum()[3:].reset_index().iloc[:, 1],
-                               mode='lines',
-                               marker={'color': '#a0065a'},
-                               name='Confirmed'),
-                    go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
-                               y=dfd.sum()[3:].reset_index().iloc[:, 1],
-                               mode='lines',
-                               marker={'color': '#6b6c6e'},
-                               name='Deceased'),
-                    go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
-                               y=dfr.sum()[3:].reset_index().iloc[:, 1],
-                               mode='lines',
-                               marker={'color': '#1b63f2'},
-                               name='Recovered', )
-                    ],
-           'layout': go.Layout({
-               'xaxis': dict(
-                   title='Date'
-               ),
-               'yaxis': dict(
-                   title='Number of people affected',
-                   # type='log',
-                   #  autorange='True'
+    if kind == 'lin':
+        return {
+            'data': data,
+            'layout': go.Layout({
+                'xaxis': dict(
+                    title='Date'
+                ),
+                'yaxis': dict(
+                    title='Number of people affected',
+                    # type='log',
+                    #  autorange='True'
 
-       ),
-               'title': 'Cumulative Cases Confirmed, Deceased and Recovered',
-           })
-       }
+                ),
+                'title': 'Cumulative Cases Confirmed, Deceased and Recovered',
+            })
+        }
 
-#daily
-@app.callback(Output('country-case-daily', 'figure'), [Input('country-picker','value')])
-def country_specific_daily(type):
-   if type in trimc['Country'].values:
+#daily treends per country
+@app.callback(Output('country-case-daily', 'figure'), [Input('country-picker','value'),Input('check-kind','value')])
+def country_specific_daily(type, graph):
+    data =[]
+    if type in trimc['Country'].values:
        sums = trimc[trimc['Country'] == 'India'].values.tolist()[0][3:]
        diffsc = []
        for i in range(1, len(sums)):
@@ -475,29 +494,24 @@ def country_specific_daily(type):
        diffsr = []
        for i in range(1, len(sums)):
            diffsr.append(sums[i] - sums[i - 1])
-       return {
-           'data': [go.Bar(x=list(trimc.columns[4:]),
+
+       if  'con' in graph:
+           data.append(go.Bar(x=list(trimc.columns[4:]),
                             y=diffsc,
-                            name='New Positive Cases'),
-                     go.Bar(x=list(trimd.columns[4:]),
-                            y=diffsd,
-                            name='New Deaths'),
-                    go.Bar(x=list(trimr.columns[4:]),
-                            y=diffsr,
-                            name='New Recovered Cases')
-                    ],
-           'layout': go.Layout({
-               'xaxis': dict(
-                   title='Dates'
-               ),
-               'yaxis': dict(
-                   title='New cases per day'
-               ),
-               'title': 'Number of cases per day',
-               'barmode':'stack'
-           })
-       }
-   else:
+                            name='New Positive Cases'),)
+       # death graph trace
+       if 'ded' in graph:
+           data.append(go.Bar(x=list(trimd.columns[4:]),
+                        y=diffsd,
+                        name='New Deaths'),)
+       # recovered trace
+       if 'rec' in graph:
+           data.append(go.Bar(x=list(trimr.columns[4:]),
+                        y=diffsr,
+                        name='New Recovered Cases'))
+
+       #World data
+    else:
        sums = dfc.sum()[3:]
        diffsc = []
        for i in range(1, len(sums)):
@@ -512,145 +526,328 @@ def country_specific_daily(type):
        diffsr = []
        for i in range(1, len(sums)):
            diffsr.append(sums[i] - sums[i - 1])
-       return {
 
-           'data': [go.Bar(x=list(dfc.columns[4:]),
-                            y=diffsc,
-                            name='New Positive Cases'),
-                     go.Bar(x=list(dfd.columns[4:]),
-                            y=diffsd,
-                            name='New Deaths'),
-                            go.Bar(x=list(dfr.columns[4:]),
-                            y=diffsr,
-                            name='New Recovered Cases'),
+       if 'con' in graph:
+           data.append(go.Bar(x=list(trimc.columns[4:]),
+                              y=diffsc,
+                              name='New Positive Cases'), )
+       # death graph trace
+       if 'ded' in graph:
+           data.append(go.Bar(x=list(trimd.columns[4:]),
+                              y=diffsd,
+                              name='New Deaths'), )
+       # recovered trace
+       if 'rec' in graph:
+           data.append(go.Bar(x=list(trimr.columns[4:]),
+                              y=diffsr,
+                              name='New Recovered Cases'))
+
+    return {
+       'data': data,
+       'layout': go.Layout({
+           'xaxis': dict(
+               title='Dates'
+           ),
+           'yaxis': dict(
+               title='New cases per day'
+           ),
+           'title': 'Number of cases per day',
+           'barmode':'stack'
+       })
+    }
+
+
+# #Global Trends
+# @app.callback(Output('Cases', 'figure'), [Input('picker', 'value')])
+# def totalcasegraphplot(type) :
+#     if(type == "alllog"):
+#         return {
+#             'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
+#                                    y=dfc.sum()[3:].reset_index().iloc[:,1],
+#                                    mode='lines',
+#                                    marker={'color': '#a0065a'},
+#                                    name='Confirmed'),
+#                      go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
+#                                 y=dfd.sum()[3:].reset_index().iloc[:, 1],
+#                                 mode='lines',
+#                                 marker={'color': '#6b6c6e'},
+#                                 name='Deceased'),
+#                      go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
+#                                 y=dfr.sum()[3:].reset_index().iloc[:, 1],
+#                                 mode='lines',
+#                                 marker={'color': '#1b63f2'},
+#                                 name='Recovered', )
+#                      ],
+#             'layout': go.Layout({
+#                 'xaxis': dict(
+#                     title='Date'
+#                 ),
+#                 'yaxis':dict(
+#                     title='Number of people affected',
+#                     type='log',
+#                     autorange=True
+#                 ),
+#                 'title': 'Cumulative Cases Confirmed, Deceased and Recovered (Logarithm)'
+#             })
+#         }
+#     elif (type == "all"):
+#         return {
+#             'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
+#                                 y=dfc.sum()[3:].reset_index().iloc[:, 1],
+#                                 mode='lines',
+#                                 marker={'color': '#a0065a'},
+#                                 name='Confirmed'),
+#                      go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
+#                                 y=dfd.sum()[3:].reset_index().iloc[:, 1],
+#                                 mode='lines',
+#                                 marker={'color': '#6b6c6e'},
+#                                 name='Deceased'),
+#                      go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
+#                                 y=dfr.sum()[3:].reset_index().iloc[:, 1],
+#                                 mode='lines',
+#                                 marker={'color': '#1b63f2'},
+#                                 name='Recovered', )
+#                      ],
+#             'layout': go.Layout({
+#                 'xaxis': dict(
+#                     title='Date'
+#                 ),
+#                 'yaxis': dict(
+#                     title='Number of people affected'
+#                 ),
+#                 'title': 'Cumulative Cases Confirmed, Deceased and Recovered'
+#             })
+#         }
+#     elif(type=="confirmed"):
+#         return {
+#             'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:,0],
+#                            y=dfc.sum()[3:].reset_index().iloc[:,1],
+#                            mode='lines',
+#                            marker={'color': '#a0065a'},
+#                            name='Confirmed',
+#                             text='Confirmed')],
+#             'layout': go.Layout({
+#                 'xaxis': dict(
+#                     title='Date'
+#                 ),
+#                 'yaxis': dict(
+#                     title='Number of people affected'
+#                 ),
+#                 'title': 'Cumulative Confirmed Cases'
+#             })
+#         }
+#     elif(type=="deceased"):
+#         return {
+#             'data': [go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:,0],
+#                            y=dfd.sum()[3:].reset_index().iloc[:,1],
+#                            mode='lines',
+#                            marker={'color': '#6b6c6e'},
+#                            name='Deceased',
+#                             text='Deceased')],
+#             'layout': go.Layout({
+#                 'xaxis': dict(
+#                     title='Date'
+#                 ),
+#                 'yaxis': dict(
+#                     title='Number of people affected'
+#                 ),
+#                 'title': 'Cumulative Number of people deceased'
+#             })
+#         }
+#     else:
+#         return {
+#             'data': [go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:,0],
+#                            y=dfr.sum()[3:].reset_index().iloc[:,1],
+#                            mode='lines',
+#                            marker={'color': '#1b63f2'},
+#                            name='Recovered',
+#                             text='Recovered')],
+#             'layout': go.Layout({
+#                 'xaxis': dict(
+#                     title='Date'
+#                 ),
+#                 'yaxis': dict(
+#                     title='Number of people affected'
+#                 ),
+#                 'title': 'Cumulative Number of people recovered'
+#             })
+#         }
+
+
+
+
+
+#Country vs country
+#country vs country totals
+
+#Country VS Country
+#country vs country cumulative
+@app.callback(Output('countryvs_totals', 'figure'), [Input('countryvs','value'),Input('country-range-slider','value')])
+def country_vs_tot(type, ran):
+   if type =='all':
+       temp = display.sort_values('Total Cases', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['Total Cases'],
+                            name='Total Infections'),
+                    go.Bar(x=temp['Country'],
+                           y=temp['Total Deaths'],
+                           name='Total Deaths'),
+                    go.Bar(x=temp['Country'],
+                           y=temp['Total Recoveries'],
+                           name='Total Recoveries'),
                     ],
            'layout': go.Layout({
                'xaxis': dict(
-                   title='Dates'
+                   title='Countries'
                ),
                'yaxis': dict(
-                   title='New cases per day'
+                   title='Total Cumulative Number of Cases'
                ),
-               'title': 'Number of cases per day',
+               'title': 'Number of Cumulative Cases per Country',
                'barmode':'stack'
            })
        }
+   elif type=='confirmed':
+       temp = display.sort_values('Total Cases', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
 
-#Global Trends
-@app.callback(Output('Cases', 'figure'), [Input('picker', 'value')])
-def totalcasegraphplot(type) :
-    if(type == "alllog"):
-        return {
-            'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
-                                   y=dfc.sum()[3:].reset_index().iloc[:,1],
-                                   mode='lines',
-                                   marker={'color': '#a0065a'},
-                                   name='Confirmed'),
-                     go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfd.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#6b6c6e'},
-                                name='Deceased'),
-                     go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfr.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#1b63f2'},
-                                name='Recovered', )
-                     ],
-            'layout': go.Layout({
-                'xaxis': dict(
-                    title='Date'
-                ),
-                'yaxis':dict(
-                    title='Number of people affected',
-                    type='log',
-                    autorange=True
-                ),
-                'title': 'Cumulative Cases Confirmed, Deceased and Recovered (Logarithm)'
-            })
-        }
-    elif (type == "all"):
-        return {
-            'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfc.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#a0065a'},
-                                name='Confirmed'),
-                     go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfd.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#6b6c6e'},
-                                name='Deceased'),
-                     go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfr.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#1b63f2'},
-                                name='Recovered', )
-                     ],
-            'layout': go.Layout({
-                'xaxis': dict(
-                    title='Date'
-                ),
-                'yaxis': dict(
-                    title='Number of people affected'
-                ),
-                'title': 'Cumulative Cases Confirmed, Deceased and Recovered'
-            })
-        }
-    elif(type=="confirmed"):
-        return {
-            'data': [go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:,0],
-                           y=dfc.sum()[3:].reset_index().iloc[:,1],
-                           mode='lines',
-                           marker={'color': '#a0065a'},
-                           name='Confirmed',
-                            text='Confirmed')],
-            'layout': go.Layout({
-                'xaxis': dict(
-                    title='Date'
-                ),
-                'yaxis': dict(
-                    title='Number of people affected'
-                ),
-                'title': 'Cumulative Confirmed Cases'
-            })
-        }
-    elif(type=="deceased"):
-        return {
-            'data': [go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:,0],
-                           y=dfd.sum()[3:].reset_index().iloc[:,1],
-                           mode='lines',
-                           marker={'color': '#6b6c6e'},
-                           name='Deceased',
-                            text='Deceased')],
-            'layout': go.Layout({
-                'xaxis': dict(
-                    title='Date'
-                ),
-                'yaxis': dict(
-                    title='Number of people affected'
-                ),
-                'title': 'Cumulative Number of people deceased'
-            })
-        }
-    else:
-        return {
-            'data': [go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:,0],
-                           y=dfr.sum()[3:].reset_index().iloc[:,1],
-                           mode='lines',
-                           marker={'color': '#1b63f2'},
-                           name='Recovered',
-                            text='Recovered')],
-            'layout': go.Layout({
-                'xaxis': dict(
-                    title='Date'
-                ),
-                'yaxis': dict(
-                    title='Number of people affected'
-                ),
-                'title': 'Cumulative Number of people recovered'
-            })
-        }
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['Total Cases'],
+                            name='Total Infections',),
+                    ],
+           'layout': go.Layout({
+               'xaxis': dict(
+                   title='Countries'
+               ),
+               'yaxis': dict(
+                   title='Total Cumulative Number of Infections'
+               ),
+               'title': 'Number of Cumulative Infections per Country',
+           })
+       }
+   elif type=='deceased':
+       temp = display.sort_values('Total Deaths', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
+
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['Total Deaths'],
+                            name='Total Deaths',),
+                    ],
+           'layout': go.Layout({
+               'xaxis': dict(
+                   title='Countries'
+               ),
+               'yaxis': dict(
+                   title='Total Cumulative Number of Deaths'
+               ),
+               'title': 'Number of Cumulative Deaths per Country',
+           })
+       }
+   elif type=='recovered':
+       temp = display.sort_values('Total Recoveries', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
+
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['Total Recoveries'],
+                            name='Total Recoveries',),
+                    ],
+           'layout': go.Layout({
+               'xaxis': dict(
+                   title='Countries'
+               ),
+               'yaxis': dict(
+                   title='Total Cumulative Number of Recoveries'
+               ),
+               'title': 'Number of Cumulative Recoveries per Country',
+           })
+       }
+
+#country vs country dailies
+@app.callback(Output('countryvs_daily', 'figure'), [Input('countryvs','value'),Input('country-range-slider','value')])
+def country_vs_tot(type,ran):
+   if type =='all':
+       temp = display.sort_values('New Infections', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['New Infections'],
+                            name='New Infections'),
+                    go.Bar(x=temp['Country'],
+                           y=temp['New Deaths'],
+                           name='New Deaths'),
+                    go.Bar(x=temp['Country'],
+                           y=temp['New Recoveries'],
+                           name='New Recoveries'),
+                    ],
+           'layout': go.Layout({
+               'xaxis': dict(
+                   title='Countries'
+               ),
+               'yaxis': dict(
+                   title='Increase in Number of Cases'
+               ),
+               'title': 'Increases in Cases per Country',
+               'barmode':'stack'
+           })
+       }
+   elif type=='confirmed':
+       temp = display.sort_values('New Infections', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
+
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['New Infections'],
+                            name='New Infections'),
+                    ],
+           'layout': go.Layout({
+               'xaxis': dict(
+                   title='Countries'
+               ),
+               'yaxis': dict(
+                   title='New Infections'
+               ),
+               'title': 'New Infections per Country',
+           })
+       }
+   elif type=='deceased':
+       temp = display.sort_values('New Deaths', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
+
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['New Deaths'],
+                            name='New Deaths',),
+                    ],
+           'layout': go.Layout({
+               'xaxis': dict(
+                   title='Countries'
+               ),
+               'yaxis': dict(
+                   title='New Deaths'
+               ),
+               'title': 'New Deaths per Country',
+           })
+       }
+   elif type=='recovered':
+       temp = display.sort_values('New Recoveries', ascending=False).iloc[ran[0]:ran[1],:]
+       return {
+
+           'data': [go.Bar(x=temp['Country'],
+                            y=temp['New Recoveries'],
+                            name='New Recoveries',),
+                    ],
+           'layout': go.Layout({
+               'xaxis': dict(
+                   title='Countries'
+               ),
+               'yaxis': dict(
+                   title='New Recoveries'
+               ),
+               'title': 'New Recoveries per Country',
+           })
+       }
+
+
+
+
 
 # @app.callback(Output('Cases','figure'), [Input('picker','value')])
 # def update_graph(type):
@@ -741,4 +938,6 @@ def totalcasegraphplot(type) :
 
 if __name__ == "__main__":
     app.run_server(debug=True)
+
+
 
