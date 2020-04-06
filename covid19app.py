@@ -18,31 +18,30 @@ external_stylesheets = [
        'crossorigin': 'anonymous'
    }
 ]
-df = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv').iloc[:,1:]
-dfc=pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv').iloc[:,1:]
-dfd=pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv').iloc[:,1:]
-dfr=pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv').iloc[:,1:]
 
-df.rename(columns={'Country/Region':'Country'},inplace=True)
+trimc= pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv').iloc[:, 1:]
+trimd= pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv').iloc[:, 1:]
+trimr= pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv').iloc[:, 1:]
 
-dfc.rename(columns={'Country/Region':'Country'},inplace=True)
-dfd.rename(columns={'Country/Region':'Country'},inplace=True)
-dfr.rename(columns={'Country/Region':'Country'},inplace=True)
+trimc.rename(columns={'Country/Region': 'Country'}, inplace=True)
 
-trimc=dfc.groupby('Country').sum().reset_index()
-trimd=dfd.groupby('Country').sum().reset_index()
-trimr=dfr.groupby('Country').sum().reset_index()
-
+trimc.rename(columns={'Country/Region': 'Country'}, inplace=True)
+trimd.rename(columns={'Country/Region': 'Country'}, inplace=True)
+trimr.rename(columns={'Country/Region': 'Country'}, inplace=True)
 
 #for the map
 
-dates = pd.DataFrame(df.columns[3:], columns=['Date'])
-countries=df.iloc[:,0:3]
+dates = pd.DataFrame(trimc.columns[3:], columns=['Date'])
+countries= trimc.iloc[:, 0:3]
 final=pd.DataFrame()
 for i in dates['Date']:
     countries['Date']=i
-    countries['Confirmed']=df[[i]]
+    countries['Confirmed']=trimc[[i]]
     final=final.append(countries,ignore_index=True)
+
+trimc=trimc.groupby('Country').sum().reset_index()
+trimd=trimd.groupby('Country').sum().reset_index()
+trimr=trimr.groupby('Country').sum().reset_index()
 
 # per_country=dfc.iloc[:,3:].sum(axis=0).reset_index()
 # per_country[['Country','Lat','Long']]=dfc[['Country','Lat','Long']]
@@ -79,31 +78,31 @@ for i in dates['Date']:
 #                    yaxis={'title': 'Number of People affected'}))
 
 #Number of Confirms and Deaths
-sums=dfc.sum()[3:]
+sums= trimc.sum()[3:]
 diffsc=[]
 for i in range(1,len(sums)):
     diffsc.append(sums[i]-sums[i-1])
 
-sums=dfd.sum()[3:]
+sums= trimd.sum()[3:]
 diffsd=[]
 for i in range(1,len(sums)):
     diffsd.append(sums[i]-sums[i-1])
 
-sums=dfr.sum()[3:]
+sums= trimr.sum()[3:]
 diffsr=[]
 for i in range(1,len(sums)):
     diffsr.append(sums[i]-sums[i-1])
 
 #Worldwide trends of new confirms and deaths
-fig3=go.Figure(data=[go.Bar(x=list(dfc.columns[4:]),
+fig3=go.Figure(data=[go.Bar(x=list(trimc.columns[4:]),
                             y=diffsc,
                             name='New Positive Cases'),
-                     go.Bar(x=list(dfd.columns[4:]),
+                     go.Bar(x=list(trimd.columns[4:]),
                             y=diffsd,
                             name='New Deaths'),
-                            go.Bar(x=list(dfr.columns[4:]),
-                            y=diffsr,
-                            name='New Recovered Cases'),
+                            go.Bar(x=list(trimr.columns[4:]),
+                                   y=diffsr,
+                                   name='New Recovered Cases'),
                      ],
                layout=go.Layout(
                     title = 'Number of cases per day',
@@ -118,10 +117,10 @@ for i in trimc['Country']:
 
 
 #Card Values
-total= trimc.iloc[:, -1].sum()+dfd.iloc[:,-1].sum()+dfr.iloc[:,-1].sum()
+total= trimc.iloc[:, -1].sum() + trimd.iloc[:, -1].sum() + trimr.iloc[:, -1].sum()
 active=trimc.iloc[:, -1].sum()
-deaths=dfd.iloc[:,-1].sum()
-recovered=dfr.iloc[:,-1].sum()
+deaths= trimd.iloc[:, -1].sum()
+recovered= trimr.iloc[:, -1].sum()
 
 
 #display table
@@ -142,11 +141,15 @@ x=[]
 for i in range(0,len(trimr)):
     x.append(trimr.iloc[i,-1]-trimr.iloc[i,-2])
 display['New Recoveries']=x
+#
 
 
 
-
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
+                # meta_tags=[
+                #     {"name": "viewport", "content": "width=device-width, initial-scale=1"}
+                # ]
+                )
 server=app.server
 
 # @server.route("/dash")
@@ -198,9 +201,9 @@ app.layout = html.Div([
     #graphs
 
     #map
-    html.Div([
-        # dcc.Graph(id='Map', figure=fig1)
-    ]),
+    # html.Div([
+    #     # dcc.Graph(id='Map', figure=fig1)
+    # ]),
 
     #heatmap
     html.Div([
@@ -248,26 +251,37 @@ app.layout = html.Div([
 
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
 
-    html.H2('Country-wise trends', style={'color':'#fff','text-align':'center','text-decoration':'underline','margin-top':15}),
+    html.H2('Global trends', style={'color':'#fff','text-align':'center','text-decoration':'underline','margin-top':15}),
 
     #dropdown country
     html.Div([
         dcc.Dropdown(id='country-picker', options=options, value='All'),
-    ],style={'margin-bottom':0,'margin-top':15,'margin-left':35,'margin-right':35},),
+    ],style={'margin-bottom':15,'margin-top':15,'margin-left':35,'margin-right':35},),
 
-    #checklist for kind
     html.Div([
-        dcc.Checklist(
-            options=[
-                {'label': 'Positive', 'value': 'con'},
-                {'label': 'Deceased', 'value': 'ded'},
-                {'label': 'Recovered', 'value': 'rec'}
-            ],
-            value=['con', 'ded', 'rec'],
-            id='check-kind', style={'color':'#fff'}
-        )
-    ]),
+    #checklist for kind
 
+        html.Div([
+                dcc.Checklist(
+                    options=[
+                        {'label': 'Positive', 'value': 'con'},
+                        {'label': 'Deceased', 'value': 'ded'},
+                        {'label': 'Recovered', 'value': 'rec'}
+                    ],
+                    value=['con', 'ded', 'rec'],
+                    id='check-kind', style={'color':'#fff'}
+                )
+        ],className='col'),
+        html.Div([
+                #death rate
+                html.H4(id='death-rate',style={'background-color':'#f06a1d', 'border-radius':'10%','color':'#fff','text-align':'center'}),
+                ],className='col-sm',style={'width':'5%'}),
+
+        html.Div([
+                #recovery rate
+                html.H4(id='recovery-rate',style={'background-color':'#1ac486', 'border-radius':'10%','color':'#fff','text-align':'center'}),
+        ],className='col-sm',style={'width':'5%'}),
+    ],className='row',style={'margin-bottom':0,'margin-top':15,'margin-left':35,'margin-right':35}),
     #graphs country
     html.Div([
         html.Div([
@@ -289,6 +303,9 @@ app.layout = html.Div([
     ],className='row', style={'padding':30}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
 
+    html.H2('Country vs Country comparisons',
+            style={'color': '#fff', 'text-align': 'center', 'text-decoration': 'underline', 'margin-top': 15}),
+#
     #dropdown kind
     html.Div([
         dcc.Dropdown(
@@ -301,7 +318,8 @@ app.layout = html.Div([
                     ],
                     value='all'
                 ),
-    ]),
+    ],
+    style={'margin-bottom':15,'margin-top':25,'margin-left':35,'margin-right':35}),
 
     #Slider for range of countries
     html.Div([
@@ -313,13 +331,14 @@ html.Div([
         step=5,
         value=[0, 20],
         # allowCross=False,
-        tooltip={'always_visible':True, 'placement':'bottomLeft'},
+        tooltip={'always_visible':False, 'placement':'bottomLeft'},
         updatemode='drag',
         pushable=5
     ),
     html.Div(id='output-container-range-slider')
 ])
-    ]),
+    ],style={'margin-bottom':15,'margin-top':25,'margin-left':35,'margin-right':35}),
+
     #Country vs Country Graphs
     html.Div([
         html.Div([
@@ -328,13 +347,19 @@ html.Div([
         html.Div([
             dcc.Graph(id='countryvs_daily')
         ],className='col'),
-],className='row'),
+],className='row',style={'margin-bottom':35,'margin-top':25,'margin-left':35,'margin-right':35}),
+
+    html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
+
     #pie
     html.Div([
         html.H4('Total number of positive cases currently per country={}'.format(total),style={'color':'#fff','text-align':'right','text-decoration':'underline'}),
         dcc.Graph(figure=px.pie(trimc, values=trimc.iloc[:, -1], names='Country', hover_name='Country',),)
     ], style={'margin':40,'padding-left':40,'padding-right':40}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
+
+    html.H2('Tabular Data of all countries',
+            style={'color': '#fff', 'text-align': 'center', 'text-decoration': 'underline', 'margin-top': 15}),
 
     #table
     html.Div([
@@ -389,7 +414,7 @@ html.Div([
     ],style={'padding':30,'margin':25}),
 
 
-])
+],className='col')
 
 #For Country Specific trends
 #Cumulative
@@ -423,25 +448,25 @@ def country_specific_cumulative(type, kind, graph):
     #if all in selected
     if type not in trimc['Country'].values:
         if 'con' in graph:
-            data.append(go.Scatter(x=dfc.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfc.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#a0065a'},
-                                name='Confirmed'))
+            data.append(go.Scatter(x=trimc.sum()[3:].reset_index().iloc[:, 0],
+                                   y=trimc.sum()[3:].reset_index().iloc[:, 1],
+                                   mode='lines',
+                                   marker={'color': '#a0065a'},
+                                   name='Confirmed'))
         #death graph trace
         if 'ded' in graph:
-            data.append( go.Scatter(x=dfd.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfd.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#6b6c6e'},
-                                name='Deceased'))
+            data.append( go.Scatter(x=trimd.sum()[3:].reset_index().iloc[:, 0],
+                                    y=trimd.sum()[3:].reset_index().iloc[:, 1],
+                                    mode='lines',
+                                    marker={'color': '#6b6c6e'},
+                                    name='Deceased'))
         #recovered trace
         if 'rec' in graph:
-            data.append(go.Scatter(x=dfr.sum()[3:].reset_index().iloc[:, 0],
-                                y=dfr.sum()[3:].reset_index().iloc[:, 1],
-                                mode='lines',
-                                marker={'color': '#1b63f2'},
-                                name='Recovered', ))
+            data.append(go.Scatter(x=trimr.sum()[3:].reset_index().iloc[:, 0],
+                                   y=trimr.sum()[3:].reset_index().iloc[:, 1],
+                                   mode='lines',
+                                   marker={'color': '#1b63f2'},
+                                   name='Recovered', ))
 
     if kind=='log':
         return {
@@ -480,17 +505,17 @@ def country_specific_cumulative(type, kind, graph):
 def country_specific_daily(type, graph):
     data =[]
     if type in trimc['Country'].values:
-       sums = trimc[trimc['Country'] == 'India'].values.tolist()[0][3:]
+       sums = trimc[trimc['Country'] == type].values.tolist()[0][3:]
        diffsc = []
        for i in range(1, len(sums)):
            diffsc.append(sums[i] - sums[i - 1])
 
-       sums = trimd[trimd['Country'] == 'India'].values.tolist()[0][3:]
+       sums = trimd[trimd['Country'] == type].values.tolist()[0][3:]
        diffsd = []
        for i in range(1, len(sums)):
            diffsd.append(sums[i] - sums[i - 1])
 
-       sums = trimr[trimr['Country'] == 'India'].values.tolist()[0][3:]
+       sums = trimr[trimr['Country'] == type].values.tolist()[0][3:]
        diffsr = []
        for i in range(1, len(sums)):
            diffsr.append(sums[i] - sums[i - 1])
@@ -512,17 +537,17 @@ def country_specific_daily(type, graph):
 
        #World data
     else:
-       sums = dfc.sum()[3:]
+       sums = trimc.sum()[3:]
        diffsc = []
        for i in range(1, len(sums)):
            diffsc.append(sums[i] - sums[i - 1])
 
-       sums = dfd.sum()[3:]
+       sums = trimd.sum()[3:]
        diffsd = []
        for i in range(1, len(sums)):
            diffsd.append(sums[i] - sums[i - 1])
 
-       sums = dfr.sum()[3:]
+       sums = trimr.sum()[3:]
        diffsr = []
        for i in range(1, len(sums)):
            diffsr.append(sums[i] - sums[i - 1])
@@ -555,6 +580,22 @@ def country_specific_daily(type, graph):
            'barmode':'stack'
        })
     }
+
+#death rate
+@app.callback(Output('death-rate', 'children'), [Input('country-picker','value')])
+def death_rate(type):
+    if type in display['Country'].values:
+        return 'Death Rate= '+str(round(display[display['Country']==type]['Total Deaths'].values[0]/display[display['Country']==type]['Total Cases'].values[0],2))+'%'
+    else:
+        return 'Death Rate= '+str(round(deaths/active,2))+'%'
+
+#recovery rate
+@app.callback(Output('recovery-rate', 'children'), [Input('country-picker','value')])
+def recovery_rate(type):
+    if type in display['Country'].values:
+        return 'Recovery Rate= '+str(round(display[display['Country']==type]['Total Recoveries'].values[0]/display[display['Country']==type]['Total Cases'].values[0],2))+'%'
+    else:
+        return 'Recovery Rate= '+str(round(recovered/active,2))+'%'
 
 
 # #Global Trends
@@ -765,7 +806,7 @@ def country_vs_tot(type, ran):
 
 #country vs country dailies
 @app.callback(Output('countryvs_daily', 'figure'), [Input('countryvs','value'),Input('country-range-slider','value')])
-def country_vs_tot(type,ran):
+def country_vs_daily(type,ran):
    if type =='all':
        temp = display.sort_values('New Infections', ascending=False).iloc[ran[0]:ran[1],:]
        return {
