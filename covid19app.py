@@ -154,11 +154,11 @@ server=app.server
 
 # @server.route("/dash")
 # def MyDashApp():
-#     app.title = "Title"
+#     app.title = "Covid-19 Insights"
 #     return app.index()
 
 app.layout = html.Div([
-    html.Div(html.H1("Covid-19 Global Pandemic Live",style={'color':'#fff','text-align':'center','margin':15,'text-decoration':'underline'}),),
+    html.Div(html.H1("Covid-19 Global Pandemic Real-time Tracker",style={'color':'#fff','text-align':'center','margin':15,'text-decoration':'underline'}),),
     html.Hr([],style={'border-top': '1px solid white', 'width':'50%'}),
     #cards
     html.Div([
@@ -185,7 +185,7 @@ app.layout = html.Div([
                     html.H3("Death Cases", className='text-light'),
                     html.H4(deaths, className='text-light')
                 ], className='card-body')
-            ], className='card bg-success')
+            ], className='card bg-warning')
         ], className='col-md-3'),
         html.Div([
             html.Div([
@@ -193,7 +193,7 @@ app.layout = html.Div([
                     html.H3("Recovery Cases", className='text-light'),
                     html.H4(recovered, className='text-light')
                 ], className='card-body')
-            ], className='card bg-warning')
+            ], className='card bg-success')
         ], className='col-md-3'),
     ], className='row', style={'margin':30}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%',}),
@@ -215,7 +215,7 @@ app.layout = html.Div([
                         hover_name='Country',
                         # labels={dfc.columns[-1]:'Current Cases'},
                         animation_frame='Date',
-                        title='Heatmap of current positive cases around the globe'
+                        title='Heat Map of positive cases around the globe. Hit the play button to see how it spread.'
                         ),
                   )
     ], style={'margin':40}),
@@ -353,8 +353,8 @@ html.Div([
 
     #pie
     html.Div([
-        html.H4('Total number of positive cases currently per country={}'.format(total),style={'color':'#fff','text-align':'right','text-decoration':'underline'}),
-        dcc.Graph(figure=px.pie(trimc, values=trimc.iloc[:, -1], names='Country', hover_name='Country',),)
+        html.H4('Total number of positive cases currently= {}'.format(total),style={'color':'#fff','text-align':'right','text-decoration':'underline'}),
+        dcc.Graph(figure=px.pie(trimc, values=trimc.iloc[:, -1], names='Country', hover_name='Country', title='Percentage contribution to positive cases of each country'),)
     ], style={'margin':40,'padding-left':40,'padding-right':40}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
 
