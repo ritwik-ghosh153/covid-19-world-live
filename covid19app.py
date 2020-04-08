@@ -185,7 +185,7 @@ app.layout = html.Div([
                     html.H3("Death Cases", className='text-light'),
                     html.H4(deaths, className='text-light')
                 ], className='card-body')
-            ], className='card bg-warning')
+            ], className='card', style={'background-color':'#d6b600'})
         ], className='col-md-3'),
         html.Div([
             html.Div([
@@ -210,7 +210,7 @@ app.layout = html.Div([
         # html.H4('Heatmap of current positive cases around the globe',style={'color':'#fff','text-align':'right','text-decoration':'underline'}),
         dcc.Graph(figure=px.density_mapbox(final, lat='Lat', lon='Long', z='Confirmed', radius=25,
                         # center=dict(lat=0, lon=180),
-                              height=800,             zoom=1,
+                              height=800, zoom=1,
                         mapbox_style="stamen-terrain",
                         hover_name='Country',
                         # labels={dfc.columns[-1]:'Current Cases'},
@@ -273,13 +273,13 @@ app.layout = html.Div([
                 )
         ],className='col'),
         html.Div([
-                #death rate
-                html.H4(id='death-rate',style={'background-color':'#f06a1d', 'border-radius':'10%','color':'#fff','text-align':'center'}),
+                #death ratef06a1d
+                html.H4(id='death-rate',style={'background-color':'#d6b600', 'border-radius':'10%','color':'#fff','text-align':'center'}),
                 ],className='col-sm',style={'width':'5%'}),
 
         html.Div([
-                #recovery rate
-                html.H4(id='recovery-rate',style={'background-color':'#1ac486', 'border-radius':'10%','color':'#fff','text-align':'center'}),
+                #recovery rate1ac486
+                html.H4(id='recovery-rate',style={'background-color':'#28a746', 'border-radius':'10%','color':'#fff','text-align':'center'}),
         ],className='col-sm',style={'width':'5%'}),
     ],className='row',style={'margin-bottom':0,'margin-top':15,'margin-left':35,'margin-right':35}),
     #graphs country
@@ -299,7 +299,7 @@ app.layout = html.Div([
         ],className='col', style={'margin':5}),
         html.Div([
             dcc.Graph(id='country-case-daily'),
-        ], className='col', style={'margin': 5}),
+        ], className='col', style={'margin-top': '32px'}),
     ],className='row', style={'padding':30}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
 
@@ -354,7 +354,7 @@ html.Div([
     #pie
     html.Div([
         html.H4('Total number of positive cases currently= {}'.format(total),style={'color':'#fff','text-align':'right','text-decoration':'underline'}),
-        dcc.Graph(figure=px.pie(trimc, values=trimc.iloc[:, -1], names='Country', hover_name='Country', title='Percentage contribution to positive cases of each country'),)
+        dcc.Graph(figure=px.pie(trimc, values=trimc.iloc[:, -1], names='Country', hover_name='Country', title='Percentage contribution to positive cases of each country').update_traces(textposition='inside', textinfo='percent+label'),)
     ], style={'margin':40,'padding-left':40,'padding-right':40}),
     html.Hr([], style={'border-top': '1px solid white', 'width': '80%', }),
 
